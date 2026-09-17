@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sterling Event Group - ON-site (Admin & Crew Secured)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div class="flex items-center space-x-3">
+                <!-- Custom SEG 'S' Logo -->
+                <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-md shadow-slate-300 overflow-hidden p-1.5">
+                    <svg viewBox="0 0 500 500" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                        <g fill="white">
+                            <rect x="60" y="50" width="300" height="140" rx="70" transform="rotate(30 60 50)"/>
+                            <rect x="140" y="270" width="300" height="140" rx="70" transform="rotate(30 140 270)"/>
+                        </g>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Sterling Event Group</h1>
+                    <p class="text-xs text-slate-500 font-medium tracking-wide">ON-site Attendee & Crew Tracking</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <div id="liveClock" class="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 hidden sm:block">
+                    <i class="fa-regular fa-clock mr-1.5 text-slate-500"></i><span id="timeDisplay">--:--:--</span>
+                </div>
+                
+                <!-- Admin Authentication Status Widget -->
+                <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                    <div id="authIndicatorDot" class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                    <span id="authRoleLabel" class="text-xs font-bold text-slate-700">Public Kiosk View</span>
+                    <button onclick="openModal('authModal')" class="ml-2 text-xs bg-slate-900 hover:bg-slate-800 text-white px-2.5 py-1 rounded-lg transition font-medium">
+                        <span id="authButtonText">Admin Sign In</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <select id="siteSelector" onchange="handleSiteChange()" class="text-sm font-semibold bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900">
+                        <!-- Populated dynamically -->
+                    </select>
+                    <button onclick="openModal('qrModal')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm px-3.5 py-2 rounded-xl border border-slate-200 transition flex items-center space-x-2" title="Generate Kiosk QR Code">
+                        <i class="fa-solid fa-qrcode text-slate-900"></i>
+                        <span class="hidden md:inline">Kiosk QR</span>
+                    </button>
+                    <!-- Admin Protected Venue Manager Button -->
+                    <button onclick="requireAdminAction(() => openModal('siteManagerModal'), 'Full Admin')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm px-3.5 py-2 rounded-xl border border-slate-200 transition flex items-center space-x-2" title="Manage Venues">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span class="hidden md:inline">Venues</span>
+                    </button>
+                </div>
+                <!-- Admin Protected Evac Roll Call Button -->
+                <button onclick="requireAdminAction(() => openEvacModal(), 'Full Admin')" class="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 py-2 rounded-xl shadow-md transition flex items-center space-x-2 animate-pulse">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span class="hidden lg:inline">EVAC ROLL CALL</span><span class="lg:hidden">EVAC</span>
+                </button>
+                <!-- Admin Protected Quick Sign-In Button -->
+                <button onclick="requireAdminAction(() => openModal('quickLogModal'), 'Crew Admin')" class="bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm px-4 py-2 rounded-xl shadow-sm transition flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Quick Sign-In</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <!-- Active Venue Banner Notification -->
+        <div class="bg-slate-900 text-slate-100 px-6 py-4 rounded-2xl flex flex-col md:flex-row items-center justify-between shadow-sm gap-4">
+            <div class="flex items-center space-x-3 w-full md:w-auto">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-building text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Active Venue Hub</span>
+                    <div class="flex items-center space-x-2">
+                        <h2 id="bannerSiteName" class="text-base font-bold text-white">Main Exhibition Arena</h2>
+                        <span class="text-slate-500">•</span>
+                        <span id="bannerSiteAddress" class="text-xs text-slate-300">Hall A, Grand Exhibition Centre</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+                <div id="crewBadgeCount" class="text-xs bg-slate-800/90 px-3.5 py-2 rounded-xl border border-slate-700/60 text-slate-300 flex items-center space-x-2">
+                    <i class="fa-solid fa-id-badge text-slate-400"></i>
+                    <span>Pre-loaded Roster: <strong id="rosterCountText" class="text-white">0</strong> crew</span>
+                </div>
+                <!-- Admin Protected Crew Roster Status View Button -->
+                <button onclick="requireAdminAction(() => openModal('crewStatusModal'), 'Crew Admin')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-sm">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                    <span>Crew Check-In Audit</span>
+                </button>
+                <!-- Admin Protected Upload Crew CSV Button -->
+                <button onclick="requireAdminAction(() => openModal('crewRosterModal'), 'Crew Admin')" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-700 transition flex items-center space-x-2">
+                    <i class="fa-solid fa-file-arrow-up text-emerald-400"></i>
+                    <span>Upload Site Crew CSV</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics Metrics Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">ON-site Attendees</p>
+                    <h3 id="statCurrent" class="text-2xl font-bold text-slate-800 mt-0.5">0</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-clipboard-user"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Today's Check-ins</p>
+                    <h3 id="statToday" class="text-2xl font-bold text-slate-800 mt-0.5">0</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Historical Records</p>
+                    <h3 id="statTotalLogs" class="text-2xl font-bold text-slate-800 mt-0.5">0</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-signal"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Access Rights</p>
+                    <h3 id="authLevelTitle" class="text-sm font-bold text-slate-800 mt-0.5 flex items-center space-x-1.5">
+                        <i class="fa-solid fa-lock text-amber-500"></i>
+                        <span>Visitor Mode</span>
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabbed Records Panel -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex space-x-2">
+                    <button onclick="switchTab('occupants')" id="tabOccupantsBtn" class="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-900 text-white transition shadow-xs">
+                        <i class="fa-solid fa-user-check mr-2"></i>ON-site Now (<span id="occupantCountBadge">0</span>)
+                    </button>
+                    <button onclick="switchTab('history')" id="tabHistoryBtn" class="px-4 py-2 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-100 transition">
+                        <i class="fa-solid fa-history mr-2"></i>Historical Logbook
+                    </button>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="relative flex-1 sm:w-64">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-search"></i>
+                        </span>
+                        <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Search name, role, company..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition">
+                    </div>
+
+                    <select id="filterType" onchange="handleFilter()" class="text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900">
+                        <option value="all">All Registrations</option>
+                        <option value="Attendee">Attendee</option>
+                        <option value="VIP Guest">VIP Guest</option>
+                        <option value="Staff / Crew">Staff / Crew</option>
+                        <option value="Exhibitor">Exhibitor</option>
+                    </select>
+
+                    <button onclick="exportCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm px-3.5 py-2 rounded-xl border border-slate-200 transition flex items-center space-x-2">
+                        <i class="fa-solid fa-download text-slate-500"></i>
+                        <span>Export CSV</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <!-- Current Occupants Tab Content -->
+                <div id="occupantsTab" class="space-y-4">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                    <th class="py-3 px-4">Name & Contact</th>
+                                    <th class="py-3 px-4">Registration Type</th>
+                                    <th class="py-3 px-4">Company / Role</th>
+                                    <th class="py-3 px-4">Sign-In Time</th>
+                                    <th class="py-3 px-4">Badge / Notes</th>
+                                    <th class="py-3 px-4 text-right admin-only-col">Actions (Admin)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="occupantsTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                                <!-- Dynamic rows inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyOccupants" class="hidden text-center py-12">
+                        <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-2xl mb-3">
+                            <i class="fa-solid fa-user-slash"></i>
+                        </div>
+                        <h4 class="text-base font-semibold text-slate-700">No attendees currently ON-site</h4>
+                        <p class="text-sm text-slate-500 mt-1">Check-in crew or ad-hoc visitors using the Quick Sign-In button above (Admin access required).</p>
+                    </div>
+                </div>
+
+                <!-- Historical Logs Tab Content -->
+                <div id="historyTab" class="space-y-4 hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                    <th class="py-3 px-4">Name & Details</th>
+                                    <th class="py-3 px-4">Type</th>
+                                    <th class="py-3 px-4">Sign-In</th>
+                                    <th class="py-3 px-4">Sign-Out</th>
+                                    <th class="py-3 px-4">Total Duration</th>
+                                    <th class="py-3 px-4">Status</th>
+                                    <th class="py-3 px-4 text-right">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                                <!-- Dynamic rows inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyHistory" class="hidden text-center py-12">
+                        <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-2xl mb-3">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </div>
+                        <h4 class="text-base font-semibold text-slate-700">No historical records found</h4>
+                        <p class="text-sm text-slate-500 mt-1">Try adjusting your filter or search criteria.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Admin Authentication Modal -->
+    <div id="authModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
+                <h3 class="font-bold text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Admin & Crew Admin Access</span>
+                </h3>
+                <button onclick="closeModal('authModal')" class="text-slate-300 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div id="authStatusBox" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600">
+                    Current Access Role: <strong id="modalRoleText" class="text-slate-900">Public Visitor</strong>
+                </div>
+
+                <div id="loginFormContainer" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Select Access Level</label>
+                        <select id="adminRoleSelect" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+                            <option value="Crew Admin">Crew Admin (Roster & Sign-ins)</option>
+                            <option value="Full Admin">Full Admin (Venues, Evac, All Rights)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Admin Security Passcode</label>
+                        <input type="password" id="adminPasscodeInput" placeholder="Enter admin PIN" autocomplete="off" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+                    </div>
+                    <div class="pt-2 flex items-center justify-end space-x-2">
+                        <button type="button" onclick="closeModal('authModal')" class="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                        <button type="button" onclick="handleAdminLogin()" class="px-4 py-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition">Authenticate</button>
+                    </div>
+                </div>
+
+                <div id="logoutFormContainer" class="space-y-3 hidden">
+                    <p class="text-xs text-slate-600">You are securely signed in with administrative permissions. You can log out to return to public visitor mode.</p>
+                    <div id="changePinContainer" class="border-t border-slate-200 pt-3 space-y-2 hidden">
+                        <label class="block text-xs font-semibold text-slate-600 uppercase">Change Admin PIN</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="password" id="newPinInput" placeholder="New PIN (min 6 characters)" autocomplete="off" class="flex-1 px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+                            <button type="button" onclick="changeAdminPin()" class="px-3.5 py-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition">Update</button>
+                        </div>
+                        <p class="text-xs text-slate-400">Applies to this device / browser only.</p>
+                    </div>
+                    <div class="pt-2 flex items-center justify-end">
+                        <button type="button" onclick="handleAdminLogout()" class="w-full px-4 py-2.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-sm transition">Sign Out / Lock Admin Access</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Sign-In Modal (Admin Only) -->
+    <div id="quickLogModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden border border-slate-200 transform transition-all">
+            <div class="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
+                <h3 class="font-bold text-lg flex items-center space-x-2">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>ON-site Sign-In Portal (Admin Secured)</span>
+                </h3>
+                <button onclick="closeModal('quickLogModal')" class="text-slate-300 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-5">
+                <!-- Mode Selector Tabs -->
+                <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                    <button type="button" id="modeCrewBtn" onclick="setSignInMode('crew')" class="py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-xs transition">
+                        <i class="fa-solid fa-id-badge mr-1.5"></i>Pre-registered Crew
+                    </button>
+                    <button type="button" id="modeAdhocBtn" onclick="setSignInMode('adhoc')" class="py-2 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-user-clock mr-1.5"></i>Ad-Hoc Visitor / Guest
+                    </button>
+                </div>
+
+                <!-- Crew Mode Form -->
+                <form id="crewSignInForm" onsubmit="handleCrewSignInSubmit(event)" class="space-y-4">
+                    <div id="crewSelectionBox">
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Select Crew Member from Site Roster *</label>
+                        <div class="relative">
+                            <select id="crewSelectDropdown" required onchange="onCrewDropdownSelect(this)" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <p id="crewRosterHelperText" class="text-xs text-slate-400 mt-1.5">Tip: You can upload a site crew CSV via the "Upload Site Crew CSV" button in the header if the roster is empty.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Crew Role / Dept</label>
+                            <input type="text" id="crewRoleDisplay" readonly class="w-full px-3.5 py-2.5 text-sm bg-slate-100 border border-slate-200 rounded-xl text-slate-600 cursor-not-allowed" placeholder="Auto-filled">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Badge Ref / Radio #</label>
+                            <input type="text" id="crewBadgeRef" placeholder="e.g., Radio Ch. 4" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white">
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-end space-x-3">
+                        <button type="button" onclick="closeModal('quickLogModal')" class="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                        <button type="submit" id="crewSubmitBtn" class="px-5 py-2.5 text-sm font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition">Sign-In Crew Member</button>
+                    </div>
+                </form>
+
+                <!-- Adhoc / Guest Mode Form -->
+                <form id="adhocSignInForm" onsubmit="handleAdhocSignInSubmit(event)" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Full Name *</label>
+                        <input type="text" id="adhocName" required placeholder="e.g., Charlotte Sterling" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Visitor Classification</label>
+                            <select id="adhocType" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+                                <option value="VIP Guest">VIP Guest</option>
+                                <option value="Attendee">Attendee</option>
+                                <option value="Exhibitor">Exhibitor</option>
+                                <option value="Staff / Crew">Staff / Crew</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Company / Organization</label>
+                            <input type="text" id="adhocDept" required placeholder="e.g., Apex Lighting Ltd" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email / Contact Number</label>
+                        <input type="text" id="adhocContact" placeholder="e.g., charlotte@apex.com" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Visitor Notes / Host</label>
+                        <textarea id="adhocNotes" rows="2" placeholder="e.g., Meeting with Production Director" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white"></textarea>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-end space-x-3">
+                        <button type="button" onclick="closeModal('quickLogModal')" class="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                        <button type="submit" class="px-5 py-2.5 text-sm font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition">Complete Visitor Sign-In</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crew Roster Upload Modal (Admin Secured) -->
+    <div id="crewRosterModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
+                <h3 class="font-bold text-lg flex items-center space-x-2">
+                    <i class="fa-solid fa-file-arrow-up"></i>
+                    <span>Upload Site Crew Roster (CSV)</span>
+                </h3>
+                <button onclick="closeModal('crewRosterModal')" class="text-slate-300 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-600 space-y-2">
+                    <div class="font-semibold text-slate-800 flex items-center space-x-1.5">
+                        <i class="fa-solid fa-circle-info text-slate-900"></i>
+                        <span>CSV Format Instructions for <span id="modalRosterSiteName" class="font-bold">Current Venue</span>:</span>
+                    </div>
+                    <p>Upload a CSV file with columns: <code class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800 font-mono">Name,Role,Company,Email</code></p>
+                    <p class="text-slate-500">Example row: <code class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800 font-mono">David Chen,Lead AV Tech,Sterling AV,david@sterling.net</code></p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Select Crew CSV File</label>
+                    <input type="file" id="crewCsvFileInput" accept=".csv" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer bg-slate-50 border border-slate-200 rounded-xl p-2">
+                </div>
+
+                <div class="border-t border-slate-200 pt-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Roster (<span id="currentRosterCount">0</span> crew members)</span>
+                        <button onclick="clearCurrentSiteRoster()" class="text-xs text-red-600 hover:text-red-700 font-medium transition flex items-center space-x-1">
+                            <i class="fa-solid fa-trash-can"></i>
+                            <span>Clear Roster</span>
+                        </button>
+                    </div>
+                    <div id="rosterListPreview" class="max-h-36 overflow-y-auto space-y-1.5 pr-1 text-xs text-slate-600">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end space-x-3">
+                    <button type="button" onclick="closeModal('crewRosterModal')" class="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                    <button type="button" onclick="handleCrewCsvUpload()" class="px-5 py-2.5 text-sm font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition flex items-center space-x-2">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>Process & Save Roster</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crew Check-In Audit & Comparison Modal (Admin Secured) -->
+    <div id="crewStatusModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-4xl w-full overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg">Crew Attendance Audit & Status</h3>
+                        <p class="text-xs text-slate-400">Comparing Uploaded Roster vs. Active ON-site Sign-ins for <span id="auditModalSiteName" class="text-white font-bold">Venue</span></p>
+                    </div>
+                </div>
+                <button onclick="closeModal('crewStatusModal')" class="text-slate-300 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Audit Metrics Summary Bar -->
+            <div class="bg-slate-50 border-b border-slate-200 px-6 py-3 grid grid-cols-3 gap-4 text-center">
+                <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs">
+                    <span class="text-xs font-semibold text-slate-500 uppercase">Total Roster</span>
+                    <h4 id="auditTotalRoster" class="text-xl font-bold text-slate-900">0</h4>
+                </div>
+                <div class="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-xs">
+                    <span class="text-xs font-semibold text-emerald-600 uppercase">ON-site Now</span>
+                    <h4 id="auditOnsiteCount" class="text-xl font-bold text-emerald-600">0</h4>
+                </div>
+                <div class="bg-white p-2.5 rounded-xl border border-amber-200 shadow-xs">
+                    <span class="text-xs font-semibold text-amber-600 uppercase">Not Checked In Yet</span>
+                    <h4 id="auditMissingCount" class="text-xl font-bold text-amber-600">0</h4>
+                </div>
+            </div>
+
+            <!-- Audit Table Content -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                <th class="py-3 px-4">Attendance Status</th>
+                                <th class="py-3 px-4">Crew Member Name</th>
+                                <th class="py-3 px-4">Assigned Role & Company</th>
+                                <th class="py-3 px-4">Email</th>
+                                <th class="py-3 px-4">Sign-In Time / Notes</th>
+                                <th class="py-3 px-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crewAuditTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Dynamic comparison rows -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyAuditRoster" class="hidden text-center py-12">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-2xl mb-3">
+                        <i class="fa-solid fa-users-slash"></i>
+                    </div>
+                    <h4 class="text-base font-semibold text-slate-700">No crew roster uploaded for this venue yet</h4>
+                    <p class="text-sm text-slate-500 mt-1">Upload a site crew CSV to enable real-time attendance auditing.</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-100 px-6 py-4 flex items-center justify-between border-t border-slate-200">
+                <span class="text-xs text-slate-500">Tip: Click "Quick Sign-In" to check-in missing crew members instantly.</span>
+                <button onclick="closeModal('crewStatusModal')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition">Close Audit Window</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Kiosk Modal -->
+    <div id="qrModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
+                <h3 class="font-bold text-lg flex items-center space-x-2">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span>Self-Service QR Check-In Kiosk</span>
+                </h3>
+                <button onclick="closeModal('qrModal')" class="text-slate-300 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 text-center space-y-4">
+                <p class="text-sm text-slate-600">Scan this venue QR code with any mobile phone camera for instant ON-site check-in at <strong id="qrModalSiteName" class="text-slate-800">Main Exhibition Arena</strong>.</p>
+                
+                <div class="bg-slate-50 border border-slate-200 p-6 rounded-2xl inline-block mx-auto shadow-xs">
+                    <div id="qrcodeDisplay" class="bg-white p-3 rounded-xl border border-slate-100 inline-block shadow-xs">
+                        <!-- Dynamic SVG QR Matrix -->
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-left text-xs text-amber-800 flex items-start space-x-3">
+                    <i class="fa-solid fa-lightbulb text-amber-600 text-sm mt-0.5"></i>
+                    <div>
+                        <span class="font-semibold block mb-0.5">Attendee Self-Check-In Simulator</span>
+                        Clicking the button below simulates an attendee or crew scanning this QR code via smartphone.
+                    </div>
+                </div>
+
+                <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <button onclick="simulateMobileScan()" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm px-5 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-mobile-screen"></i>
+                        <span>Simulate Mobile Scan</span>
+                    </button>
+                    <button onclick="closeModal('qrModal')" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm px-4 py-2.5 rounded-xl transition">Close Kiosk</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Venue Management Modal (Full Admin Only) -->
+    <div id="siteManagerModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xl w-full overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
+                <h3 class="font-bold text-lg flex items-center space-x-2">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Sterling Event Venues & Stages (Full Admin)</span>
+                </h3>
+                <button onclick="closeModal('siteManagerModal')" class="text-slate-300 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="space-y-3">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Event Hubs & Stages</h4>
+                    <div id="sitesListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-200 pt-4">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Add New Venue / Stage</h4>
+                    <form id="addSiteForm" onsubmit="handleAddSite(event)" class="space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <input type="text" id="newSiteName" required placeholder="Venue Name (e.g. VIP Lounge B)" class="px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+                            <input type="text" id="newSiteAddress" required placeholder="Location details (e.g. Mezzanine Level)" class="px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs px-4 py-2 rounded-xl transition shadow-xs flex items-center space-x-1.5">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Add Venue Hub</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="border-t border-slate-200 pt-4">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Data Backup & Transfer</h4>
+                    <p class="text-xs text-slate-500 mb-3">All data is stored locally in this browser only. Export a backup to move venues, rosters and sign-in logs to another device, or to keep an off-device copy.</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="exportAppBackup()" class="bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs px-4 py-2 rounded-xl transition shadow-xs flex items-center space-x-1.5">
+                            <i class="fa-solid fa-file-export"></i>
+                            <span>Export Backup (JSON)</span>
+                        </button>
+                        <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs px-4 py-2 rounded-xl border border-slate-200 transition flex items-center space-x-1.5 cursor-pointer">
+                            <i class="fa-solid fa-file-import"></i>
+                            <span>Import Backup</span>
+                            <input type="file" id="backupImportInput" accept=".json,application/json" class="hidden" onchange="importAppBackup(event)">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Self-Checkin Quick Modal -->
+    <div id="mobileScanModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-200">
+            <div class="bg-emerald-600 px-6 py-4 flex items-center justify-between text-white">
+                <h3 class="font-bold text-lg flex items-center space-x-2">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span>Sterling ON-site Mobile Check-In</span>
+                </h3>
+                <button onclick="closeModal('mobileScanModal')" class="text-emerald-200 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="handleMobileScanSubmit(event)" class="p-6 space-y-4">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800">
+                    Checking in for venue: <strong id="scanModalSiteName">Main Exhibition Arena</strong>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Your Full Name *</label>
+                    <input type="text" id="scanName" required placeholder="e.g., Liam O'Connor" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Registration</label>
+                        <select id="scanType" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="Attendee">Attendee</option>
+                            <option value="VIP Guest">VIP Guest</option>
+                            <option value="Staff / Crew">Staff / Crew</option>
+                            <option value="Exhibitor">Exhibitor</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Company / Role</label>
+                        <input type="text" id="scanDept" required placeholder="e.g., Stage Production" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Badge Notes / Access Request</label>
+                    <input type="text" id="scanNotes" placeholder="e.g., All Access Media Pass" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('mobileScanModal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition">Check-In Now</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Emergency Evacuation Roll Call Modal (Full Admin Only) -->
+    <div id="evacModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden border-4 border-red-600 flex flex-col max-h-[90vh]">
+            <!-- Red Emergency Header -->
+            <div class="bg-red-600 px-6 py-5 flex items-center justify-between text-white">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl animate-bounce">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black uppercase tracking-wider">Emergency Evacuation Roll Call (Admin)</h2>
+                        <p class="text-xs text-red-100 font-medium">Active Venue: <span id="evacModalSiteName" class="underline font-bold">Main Exhibition Arena</span> • <span id="evacTimestamp">--:--:--</span></p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="exportEvacReport()" class="bg-white text-red-700 hover:bg-red-50 font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-sm flex items-center space-x-2">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>Export Evac Audit CSV</span>
+                    </button>
+                    <button onclick="closeModal('evacModal')" class="text-red-200 hover:text-white p-2 transition">
+                        <i class="fa-solid fa-xmark text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Evac Stats Banner -->
+            <div class="bg-red-50 border-b border-red-200 px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                <div class="bg-white p-3 rounded-2xl border border-red-200 shadow-xs">
+                    <span class="text-xs font-bold text-red-600 uppercase">Total ON-site Persons</span>
+                    <h3 id="evacTotalCount" class="text-2xl font-black text-slate-900">0</h3>
+                </div>
+                <div class="bg-white p-3 rounded-2xl border border-emerald-200 shadow-xs">
+                    <span class="text-xs font-bold text-emerald-600 uppercase">Accounted For (Safe)</span>
+                    <h3 id="evacSafeCount" class="text-2xl font-black text-emerald-600">0</h3>
+                </div>
+                <div class="bg-white p-3 rounded-2xl border border-amber-200 shadow-xs">
+                    <span class="text-xs font-bold text-amber-600 uppercase">Pending Verification</span>
+                    <h3 id="evacPendingCount" class="text-2xl font-black text-amber-600">0</h3>
+                </div>
+            </div>
+
+            <!-- Evac Search & Filter Controls -->
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="relative w-full sm:w-80">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-search"></i>
+                    </span>
+                    <input type="text" id="evacSearchInput" oninput="renderEvacTable()" placeholder="Search occupant name, company..." class="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600">
+                </div>
+                <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                    <button onclick="markAllEvacSafe(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition">
+                        <i class="fa-solid fa-check-double mr-1"></i> Mark All Safe
+                    </button>
+                    <button onclick="markAllEvacSafe(false)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition">
+                        Reset Status
+                    </button>
+                </div>
+            </div>
+
+            <!-- Occupants Safety Checklist Table -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                <th class="py-3 px-4">Safety Status</th>
+                                <th class="py-3 px-4">Name & Contact</th>
+                                <th class="py-3 px-4">Type</th>
+                                <th class="py-3 px-4">Company / Role</th>
+                                <th class="py-3 px-4">Sign-In Time</th>
+                                <th class="py-3 px-4">Badge / Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="evacTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Dynamic rows -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyEvac" class="hidden text-center py-12">
+                    <div class="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto text-2xl mb-3">
+                        <i class="fa-solid fa-shield-heart"></i>
+                    </div>
+                    <h4 class="text-base font-semibold text-slate-700">No active occupants on-site for emergency roll call</h4>
+                    <p class="text-sm text-slate-500 mt-1">All personnel have already signed out or venue is currently clear.</p>
+                </div>
+            </div>
+
+            <!-- Footer Emergency Instructions -->
+            <div class="bg-slate-900 text-slate-300 px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs gap-2">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-bullhorn text-red-500 text-sm"></i>
+                    <span><strong>Evacuation Protocol:</strong> Verify all personnel against assembly point rosters. Click checkmark when safe.</span>
+                </div>
+                <button onclick="closeModal('evacModal')" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-5 py-2 rounded-xl transition">Close Roll Call</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        // Authentication State
+        // Roles: 'Visitor' (default), 'Crew Admin', 'Full Admin'
+        let currentAuthRole = localStorage.getItem('sterling_auth_role') || 'Visitor';
+
+        // Sites Data
+        let sites = JSON.parse(localStorage.getItem('sterling_sites')) || [
+            { id: 'site-1', name: 'Main Exhibition Arena', address: 'Hall A, Grand Exhibition Centre' },
+            { id: 'site-2', name: 'VIP & Keynote Lounge', address: 'Level 2 Skyline Suites' },
+            { id: 'site-3', name: 'Production & Crew Gate', address: 'Stage Dock 4' }
+        ];
+
+        let currentSiteId = localStorage.getItem('sterling_current_site') || 'site-1';
+
+        // Site Crew Rosters
+        let siteRosters = JSON.parse(localStorage.getItem('sterling_site_rosters')) || {
+            'site-1': [
+                { name: 'David Chen', role: 'Lead AV Tech', company: 'Sterling AV', email: 'd.chen@sterling-av.net' },
+                { name: 'Marcus Vance', role: 'Rigging Supervisor', company: 'Apex Rigging', email: 'marcus@apex.co' },
+                { name: 'Sarah Jenkins', role: 'Stage Manager', company: 'Sterling Event Group', email: 'sarah.j@sterling.org' }
+            ],
+            'site-2': [
+                { name: 'Arthur Pendelton', role: 'VIP Concierge', company: 'Sterling Event Group', email: 'arthur@sterling.org' },
+                { name: 'Claire Dupont', role: 'Keynote Coordinator', company: 'Global Speakers Bureau', email: 'claire@globalspeakers.io' }
+            ],
+            'site-3': [
+                { name: 'Jake Kowalski', role: 'Dock Master', company: 'Exhibition Logistics', email: 'jake@exhibitionlogistics.com' }
+            ]
+        };
+
+        // Logs Data
+        let logs = JSON.parse(localStorage.getItem('sterling_logs')) || [
+            {
+                id: 'log-1',
+                siteId: 'site-1',
+                name: 'Alexander Wright',
+                type: 'VIP Guest',
+                dept: 'Keynote Speaker',
+                contact: 'alex@keynote-speakers.org',
+                signInTime: new Date(Date.now() - 3600000 * 3).toISOString(),
+                signOutTime: null,
+                notes: 'All-Access VIP Badge #001',
+                status: 'Active',
+                safe: false
+            },
+            {
+                id: 'log-2',
+                siteId: 'site-1',
+                name: 'David Chen',
+                type: 'Staff / Crew',
+                dept: 'Sterling AV',
+                contact: 'd.chen@sterling-av.net',
+                signInTime: new Date(Date.now() - 3600000 * 1.5).toISOString(),
+                signOutTime: null,
+                notes: 'Pre-registered Crew Sign-In (Radio Ch. 4)',
+                status: 'Active',
+                safe: false
+            }
+        ];
+
+        let currentActiveTab = 'occupants';
+        let currentSignInMode = 'crew';
+
+        // Live Clock Update
+        setInterval(() => {
+            const now = new Date();
+            const timeEl = document.getElementById('timeDisplay');
+            if(timeEl) timeEl.innerText = now.toLocaleTimeString();
+        }, 1000);
+
+        // Save State to LocalStorage
+        function saveAppData() {
+            localStorage.setItem('sterling_logs', JSON.stringify(logs));
+            localStorage.setItem('sterling_sites', JSON.stringify(sites));
+            localStorage.setItem('sterling_site_rosters', JSON.stringify(siteRosters));
+            localStorage.setItem('sterling_current_site', currentSiteId);
+            localStorage.setItem('sterling_auth_role', currentAuthRole);
+        }
+
+        // Authentication & Authorization Guards
+        function updateAuthUI() {
+            const dot = document.getElementById('authIndicatorDot');
+            const label = document.getElementById('authRoleLabel');
+            const btnText = document.getElementById('authButtonText');
+            const levelTitle = document.getElementById('authLevelTitle');
+            const modalRoleText = document.getElementById('modalRoleText');
+            const loginForm = document.getElementById('loginFormContainer');
+            const logoutForm = document.getElementById('logoutFormContainer');
+
+            if(currentAuthRole === 'Full Admin') {
+                if(dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                if(label) label.innerText = "Full Admin Mode";
+                if(btnText) btnText.innerText = "Admin Portal";
+                if(levelTitle) levelTitle.innerHTML = '<i class="fa-solid fa-shield-halved text-emerald-600 mr-1"></i><span>Full Administrator</span>';
+                if(modalRoleText) modalRoleText.innerText = "Full Administrator";
+                if(loginForm) loginForm.classList.add('hidden');
+                if(logoutForm) logoutForm.classList.remove('hidden');
+            } else if(currentAuthRole === 'Crew Admin') {
+                if(dot) dot.className = "w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse";
+                if(label) label.innerText = "Crew Admin Mode";
+                if(btnText) btnText.innerText = "Admin Portal";
+                if(levelTitle) levelTitle.innerHTML = '<i class="fa-solid fa-id-badge text-blue-600 mr-1"></i><span>Crew Administrator</span>';
+                if(modalRoleText) modalRoleText.innerText = "Crew Administrator";
+                if(loginForm) loginForm.classList.add('hidden');
+                if(logoutForm) logoutForm.classList.remove('hidden');
+            } else {
+                if(dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-500";
+                if(label) label.innerText = "Public Visitor View";
+                if(btnText) btnText.innerText = "Admin Sign In";
+                if(levelTitle) levelTitle.innerHTML = '<i class="fa-solid fa-lock text-amber-500 mr-1"></i><span>Visitor View (Secured)</span>';
+                if(modalRoleText) modalRoleText.innerText = "Public Visitor (Unauthenticated)";
+                if(loginForm) loginForm.classList.remove('hidden');
+                if(logoutForm) logoutForm.classList.add('hidden');
+            }
+            const changePinContainer = document.getElementById('changePinContainer');
+            if(changePinContainer) changePinContainer.classList.toggle('hidden', currentAuthRole !== 'Full Admin');
+            renderTables();
+        }
+
+        async function handleAdminLogin() {
+            const roleSelect = document.getElementById('adminRoleSelect').value;
+            const passcode = document.getElementById('adminPasscodeInput').value.trim();
+
+            if(!passcode) {
+                showToast("Please enter the admin PIN.", "error");
+                return;
+            }
+
+            const enteredHash = await hashPin(passcode);
+            const storedHash = localStorage.getItem('sterling_admin_pin_hash') || await hashPin('seg2026');
+
+            if(enteredHash === storedHash) {
+                currentAuthRole = roleSelect;
+                saveAppData();
+                closeModal('authModal');
+                document.getElementById('adminPasscodeInput').value = '';
+                updateAuthUI();
+                showToast(`Successfully authenticated as ${currentAuthRole}!`);
+            } else {
+                showToast("Invalid security passcode.", "error");
+            }
+        }
+
+        // SHA-256 PIN hashing via Web Crypto (simple non-crypto fallback for insecure contexts)
+        async function hashPin(pin) {
+            const input = 'sterling::' + pin;
+            if (window.crypto && crypto.subtle) {
+                const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+                return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+            let h = 5381;
+            for (let i = 0; i < input.length; i++) h = ((h << 5) + h + input.charCodeAt(i)) >>> 0;
+            return 'djb2-' + h.toString(16);
+        }
+
+        async function changeAdminPin() {
+            const input = document.getElementById('newPinInput');
+            const newPin = input.value.trim();
+            if(newPin.length < 6) {
+                showToast("New PIN must be at least 6 characters.", "error");
+                return;
+            }
+            localStorage.setItem('sterling_admin_pin_hash', await hashPin(newPin));
+            input.value = '';
+            showToast("Admin PIN updated on this device.");
+        }
+
+        function handleAdminLogout() {
+            currentAuthRole = 'Visitor';
+            saveAppData();
+            closeModal('authModal');
+            updateAuthUI();
+            showToast("Signed out of administrative mode. Returned to visitor view.");
+        }
+
+        function requireAdminAction(callback, requiredRole = 'Crew Admin') {
+            if(currentAuthRole === 'Full Admin') {
+                callback();
+                return;
+            }
+            if(currentAuthRole === 'Crew Admin') {
+                if(requiredRole === 'Full Admin') {
+                    showToast("This action requires Full Administrator privileges.", "error");
+                    openModal('authModal');
+                    return;
+                }
+                callback();
+                return;
+            }
+
+            // If Visitor, deny and prompt login
+            showToast("Administrative access required. Please sign in as Crew Admin or Full Admin.", "error");
+            openModal('authModal');
+        }
+
+        // Modal Helpers
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            if(modalId === 'qrModal') {
+                renderQRCode();
+            }
+            if(modalId === 'siteManagerModal') {
+                requireAdminAction(() => renderSitesList(), 'Full Admin');
+            }
+            if(modalId === 'quickLogModal') {
+                setSignInMode('crew');
+                populateCrewDropdown();
+            }
+            if(modalId === 'crewRosterModal') {
+                renderCrewRosterPreview();
+            }
+            if(modalId === 'crewStatusModal') {
+                renderCrewAuditTable();
+            }
+            if(modalId === 'authModal') {
+                updateAuthUI();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            if(modalId === 'quickLogModal') {
+                document.getElementById('crewSignInForm').reset();
+                document.getElementById('adhocSignInForm').reset();
+            }
+            if(modalId === 'crewRosterModal') {
+                document.getElementById('crewCsvFileInput').value = '';
+            }
+            if(modalId === 'mobileScanModal') {
+                document.getElementById('mobileScanModal').querySelector('form').reset();
+            }
+        }
+
+        // Sign-In Mode Switcher
+        function setSignInMode(mode) {
+            currentSignInMode = mode;
+            const crewBtn = document.getElementById('modeCrewBtn');
+            const adhocBtn = document.getElementById('modeAdhocBtn');
+            const crewForm = document.getElementById('crewSignInForm');
+            const adhocForm = document.getElementById('adhocSignInForm');
+
+            if(mode === 'crew') {
+                crewBtn.className = "py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-xs transition";
+                adhocBtn.className = "py-2 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition";
+                crewForm.classList.remove('hidden');
+                adhocForm.classList.add('hidden');
+                populateCrewDropdown();
+            } else {
+                adhocBtn.className = "py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-xs transition";
+                crewBtn.className = "py-2 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition";
+                adhocForm.classList.remove('hidden');
+                crewForm.classList.add('hidden');
+            }
+        }
+
+        // Populate Crew Select Dropdown
+        function populateCrewDropdown() {
+            const dropdown = document.getElementById('crewSelectDropdown');
+            const helperText = document.getElementById('crewRosterHelperText');
+            const submitBtn = document.getElementById('crewSubmitBtn');
+            if(!dropdown) return;
+
+            dropdown.innerHTML = '';
+            const roster = siteRosters[currentSiteId] || [];
+
+            if(roster.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.innerText = "-- No crew roster uploaded for this venue yet --";
+                dropdown.appendChild(opt);
+                dropdown.disabled = true;
+                if(submitBtn) submitBtn.disabled = true;
+                if(helperText) helperText.innerHTML = '<span class="text-amber-600 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>No crew CSV uploaded for this site yet. Click "Upload Site Crew CSV" in the header to import crew names.</span>';
+                document.getElementById('crewRoleDisplay').value = '';
+                return;
+            }
+
+            dropdown.disabled = false;
+            if(submitBtn) submitBtn.disabled = false;
+            if(helperText) helperText.innerHTML = `Showing ${roster.length} pre-registered crew members for ${getCurrentSite().name}.`;
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = "";
+            defaultOpt.innerText = "-- Search or Select Crew Member --";
+            dropdown.appendChild(defaultOpt);
+
+            roster.forEach((crew, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.innerText = `${crew.name} (${crew.role} - ${crew.company})`;
+                dropdown.appendChild(opt);
+            });
+            document.getElementById('crewRoleDisplay').value = '';
+        }
+
+        function onCrewDropdownSelect(selectEl) {
+            const idx = selectEl.value;
+            const roleInput = document.getElementById('crewRoleDisplay');
+            if(idx === "") {
+                roleInput.value = '';
+                return;
+            }
+            const roster = siteRosters[currentSiteId] || [];
+            const selectedCrew = roster[idx];
+            if(selectedCrew) {
+                roleInput.value = `${selectedCrew.role} (${selectedCrew.company})`;
+            }
+        }
+
+        // Handle Crew Sign-In Submit
+        function handleCrewSignInSubmit(e) {
+            e.preventDefault();
+            const selectEl = document.getElementById('crewSelectDropdown');
+            const idx = selectEl.value;
+            if(idx === "") {
+                showToast("Please select a crew member from the roster.", "error");
+                return;
+            }
+
+            const roster = siteRosters[currentSiteId] || [];
+            const crew = roster[idx];
+            if(isAlreadyOnsite(crew.name)) {
+                showToast(`${crew.name} is already signed in at this venue.`, "error");
+                return;
+            }
+            const badgeRef = document.getElementById('crewBadgeRef').value.trim();
+
+            const newEntry = {
+                id: 'log-' + Date.now(),
+                siteId: currentSiteId,
+                name: crew.name,
+                type: 'Staff / Crew',
+                dept: crew.company + ' (' + crew.role + ')',
+                contact: crew.email || 'N/A',
+                signInTime: new Date().toISOString(),
+                signOutTime: null,
+                notes: badgeRef ? `Crew Sign-In (${badgeRef})` : `Pre-registered Crew (${crew.role})`,
+                status: 'Active',
+                safe: false
+            };
+
+            logs.unshift(newEntry);
+            saveAppData();
+            closeModal('quickLogModal');
+            renderTables();
+            showToast(`${crew.name} successfully checked in at ${getCurrentSite().name}!`);
+        }
+
+        // Handle Ad-Hoc Visitor Sign-In Submit
+        function handleAdhocSignInSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('adhocName').value.trim();
+            const type = document.getElementById('adhocType').value;
+            const dept = document.getElementById('adhocDept').value.trim();
+            const contact = document.getElementById('adhocContact').value.trim();
+            const notes = document.getElementById('adhocNotes').value.trim();
+
+            if(isAlreadyOnsite(name)) {
+                showToast(`${name} is already signed in at this venue.`, "error");
+                return;
+            }
+
+            const newEntry = {
+                id: 'log-' + Date.now(),
+                siteId: currentSiteId,
+                name,
+                type,
+                dept,
+                contact: contact || 'Ad-Hoc Visitor',
+                signInTime: new Date().toISOString(),
+                signOutTime: null,
+                notes: notes ? `Ad-Hoc Visitor: ${notes}` : 'Ad-Hoc Visitor Check-In',
+                status: 'Active',
+                safe: false
+            };
+
+            logs.unshift(newEntry);
+            saveAppData();
+            closeModal('quickLogModal');
+            renderTables();
+            showToast(`${name} (${type}) successfully checked in!`);
+        }
+
+        // Handle Crew CSV Upload
+        function handleCrewCsvUpload() {
+            const fileInput = document.getElementById('crewCsvFileInput');
+            if(!fileInput.files || fileInput.files.length === 0) {
+                showToast("Please select a CSV file to upload.", "error");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const text = e.target.result;
+                parseCrewCsvText(text);
+            };
+            reader.readAsText(file);
+        }
+
+        // RFC 4180-style CSV parsing: handles quoted fields, embedded commas and escaped quotes
+        function parseCsvRows(text) {
+            const rows = [];
+            let row = [], field = '', inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                if (inQuotes) {
+                    if (ch === '"') {
+                        if (text[i + 1] === '"') { field += '"'; i++; }
+                        else inQuotes = false;
+                    } else {
+                        field += ch;
+                    }
+                } else if (ch === '"') {
+                    inQuotes = true;
+                } else if (ch === ',') {
+                    row.push(field); field = '';
+                } else if (ch === '\n' || ch === '\r') {
+                    if (ch === '\r' && text[i + 1] === '\n') i++;
+                    row.push(field); field = '';
+                    if (row.length > 1 || row[0].trim() !== '') rows.push(row);
+                    row = [];
+                } else {
+                    field += ch;
+                }
+            }
+            row.push(field);
+            if (row.length > 1 || row[0].trim() !== '') rows.push(row);
+            return rows;
+        }
+
+        function parseCrewCsvText(csvText) {
+            const rows = parseCsvRows(csvText);
+            const newCrewList = [];
+
+            rows.forEach((rawCols, i) => {
+                const cols = rawCols.map(c => c.trim());
+                if(i === 0 && cols[0] && ['name', 'full name'].includes(cols[0].toLowerCase())) {
+                    return; // skip header row
+                }
+                if(cols[0]) {
+                    newCrewList.push({
+                        name: cols[0],
+                        role: cols[1] || 'Crew Member',
+                        company: cols[2] || getCurrentSite().name,
+                        email: cols[3] || 'N/A'
+                    });
+                }
+            });
+
+            if(newCrewList.length === 0) {
+                showToast("Could not parse any crew records from the CSV file.", "error");
+                return;
+            }
+
+            siteRosters[currentSiteId] = newCrewList;
+            saveAppData();
+            renderCrewRosterPreview();
+            updateSiteBanner();
+            showToast(`Successfully imported ${newCrewList.length} crew members for ${getCurrentSite().name}!`);
+        }
+
+        function renderCrewRosterPreview() {
+            const container = document.getElementById('rosterListPreview');
+            const countEl = document.getElementById('currentRosterCount');
+            const siteNameEl = document.getElementById('modalRosterSiteName');
+            if(!container) return;
+
+            if(siteNameEl) siteNameEl.innerText = getCurrentSite().name;
+            const roster = siteRosters[currentSiteId] || [];
+            if(countEl) countEl.innerText = roster.length;
+
+            container.innerHTML = '';
+            if(roster.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 italic py-2">No crew members in roster for this venue yet.</p>';
+                return;
+            }
+
+            roster.forEach(crew => {
+                const div = document.createElement('div');
+                div.className = "bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex items-center justify-between";
+                div.innerHTML = `
+                    <div>
+                        <span class="font-semibold text-slate-800">${escapeHtml(crew.name)}</span>
+                        <span class="text-slate-500 ml-1.5">(${escapeHtml(crew.role)} - ${escapeHtml(crew.company)})</span>
+                    </div>
+                    <span class="text-slate-400 text-xs">${escapeHtml(crew.email)}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function clearCurrentSiteRoster() {
+            if(confirm("Are you sure you want to clear the crew roster for this venue?")) {
+                siteRosters[currentSiteId] = [];
+                saveAppData();
+                renderCrewRosterPreview();
+                updateSiteBanner();
+                showToast("Crew roster cleared.");
+            }
+        }
+
+        function renderCrewAuditTable() {
+            const site = getCurrentSite();
+            const modalSiteName = document.getElementById('auditModalSiteName');
+            if(modalSiteName) modalSiteName.innerText = site.name;
+
+            const roster = siteRosters[currentSiteId] || [];
+            const siteLogs = logs.filter(l => l.siteId === currentSiteId && l.type === 'Staff / Crew' && l.status === 'Active');
+
+            let onsiteCount = 0;
+            let missingCount = 0;
+
+            const tbody = document.getElementById('crewAuditTableBody');
+            const emptyEl = document.getElementById('emptyAuditRoster');
+            if(!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if(roster.length === 0) {
+                if(emptyEl) emptyEl.classList.remove('hidden');
+                document.getElementById('auditTotalRoster').innerText = 0;
+                document.getElementById('auditOnsiteCount').innerText = 0;
+                document.getElementById('auditMissingCount').innerText = 0;
+                return;
+            }
+
+            if(emptyEl) emptyEl.classList.add('hidden');
+
+            roster.forEach(crew => {
+                const activeLog = siteLogs.find(l => l.name.toLowerCase() === crew.name.toLowerCase());
+                const isOnsite = Boolean(activeLog);
+
+                if(isOnsite) {
+                    onsiteCount++;
+                } else {
+                    missingCount++;
+                }
+
+                const statusBadge = isOnsite 
+                    ? '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-circle-check mr-1.5"></i>ON-site</span>'
+                    : '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"><i class="fa-solid fa-clock mr-1.5"></i>Not Arrived / Off-Site</span>';
+
+                const signInDetails = isOnsite 
+                    ? `<span class="text-emerald-700 font-medium">Checked in at ${formatTimestamp(activeLog.signInTime)}</span>`
+                    : '<span class="text-slate-400 italic">No active sign-in record</span>';
+
+                const actionButton = isOnsite
+                    ? `<button class="audit-action-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs px-3 py-1.5 rounded-lg border border-slate-200 transition">Sign Out</button>`
+                    : `<button class="audit-action-btn bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-3 py-1.5 rounded-lg transition shadow-xs">Check In Now</button>`;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition";
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4">${statusBadge}</td>
+                    <td class="py-3.5 px-4 font-bold text-slate-900">${escapeHtml(crew.name)}</td>
+                    <td class="py-3.5 px-4 text-slate-600">${escapeHtml(crew.role)} <span class="text-slate-400">(${escapeHtml(crew.company)})</span></td>
+                    <td class="py-3.5 px-4 text-slate-500 text-xs">${escapeHtml(crew.email)}</td>
+                    <td class="py-3.5 px-4 text-xs">${signInDetails}</td>
+                    <td class="py-3.5 px-4 text-right">${actionButton}</td>
+                `;
+                const actionBtn = tr.querySelector('.audit-action-btn');
+                if(actionBtn) actionBtn.addEventListener('click', () => {
+                    if(isOnsite) {
+                        signOutUser(activeLog.id);
+                        renderCrewAuditTable();
+                    } else {
+                        quickCheckInCrewMember(crew.name);
+                    }
+                });
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('auditTotalRoster').innerText = roster.length;
+            document.getElementById('auditOnsiteCount').innerText = onsiteCount;
+            document.getElementById('auditMissingCount').innerText = missingCount;
+        }
+
+        function quickCheckInCrewMember(crewName) {
+            const roster = siteRosters[currentSiteId] || [];
+            const crew = roster.find(c => c.name.toLowerCase() === crewName.toLowerCase());
+            if(!crew) return;
+
+            if(isAlreadyOnsite(crew.name)) {
+                showToast(`${crew.name} is already signed in at this venue.`, "error");
+                renderCrewAuditTable();
+                return;
+            }
+
+            const newEntry = {
+                id: 'log-' + Date.now(),
+                siteId: currentSiteId,
+                name: crew.name,
+                type: 'Staff / Crew',
+                dept: crew.company + ' (' + crew.role + ')',
+                contact: crew.email || 'N/A',
+                signInTime: new Date().toISOString(),
+                signOutTime: null,
+                notes: `Pre-registered Roster Check-In`,
+                status: 'Active',
+                safe: false
+            };
+
+            logs.unshift(newEntry);
+            saveAppData();
+            renderTables();
+            renderCrewAuditTable();
+            showToast(`${crew.name} successfully checked in!`);
+        }
+
+        function handleSiteChange() {
+            const selector = document.getElementById('siteSelector');
+            currentSiteId = selector.value;
+            saveAppData();
+            updateSiteBanner();
+            renderTables();
+            showToast(`Switched active venue to ${getCurrentSite().name}`);
+        }
+
+        function getCurrentSite() {
+            return sites.find(s => s.id === currentSiteId) || sites[0];
+        }
+
+        // Prevent the same person being signed in twice at the active venue (would skew evac counts)
+        function isAlreadyOnsite(name) {
+            return logs.some(l => l.siteId === currentSiteId && l.status === 'Active' && l.name.toLowerCase() === name.toLowerCase());
+        }
+
+        function updateSiteBanner() {
+            const site = getCurrentSite();
+            const bannerName = document.getElementById('bannerSiteName');
+            const bannerAddr = document.getElementById('bannerSiteAddress');
+            const rosterCountText = document.getElementById('rosterCountText');
+            const qrModalName = document.getElementById('qrModalSiteName');
+            const scanModalSiteName = document.getElementById('scanModalSiteName');
+            
+            if(bannerName) bannerName.innerText = site.name;
+            if(bannerAddr) bannerAddr.innerText = site.address;
+            const rosterLen = (siteRosters[currentSiteId] || []).length;
+            if(rosterCountText) rosterCountText.innerText = rosterLen;
+            if(qrModalName) qrModalName.innerText = site.name;
+            if(scanModalSiteName) scanModalSiteName.innerText = site.name;
+
+            const selector = document.getElementById('siteSelector');
+            if(selector) {
+                selector.innerHTML = '';
+                sites.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.innerText = s.name;
+                    if(s.id === currentSiteId) opt.selected = true;
+                    selector.appendChild(opt);
+                });
+            }
+        }
+
+        function renderSitesList() {
+            const container = document.getElementById('sitesListContainer');
+            if(!container) return;
+            container.innerHTML = '';
+
+            sites.forEach(s => {
+                const isCurrent = s.id === currentSiteId;
+                const rosterCount = (siteRosters[s.id] || []).length;
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-xl border ${isCurrent ? 'bg-slate-100 border-slate-300' : 'bg-slate-50 border-slate-200'}`;
+                div.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold text-sm text-slate-800 flex items-center space-x-2">
+                                <span>${escapeHtml(s.name)}</span>
+                                ${isCurrent ? '<span class="bg-slate-900 text-white text-xs px-2 py-0.5 rounded-full font-medium">Active Venue</span>' : ''}
+                            </div>
+                            <div class="text-xs text-slate-500">${escapeHtml(s.address)} • <span class="font-medium text-slate-600">${rosterCount} crew in roster</span></div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            ${!isCurrent ? `<button class="site-select-btn bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg transition">Select</button>` : ''}
+                            <button class="site-edit-btn text-slate-400 hover:text-slate-900 p-1.5 transition" title="Edit venue details"><i class="fa-solid fa-pen"></i></button>
+                            ${sites.length > 1 ? `<button class="site-delete-btn text-slate-400 hover:text-red-600 p-1.5 transition" title="Delete venue"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                        </div>
+                    </div>
+                    <div class="site-row-edit hidden mt-3 pt-3 border-t border-slate-200 space-y-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="text" class="site-edit-name px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900" value="${escapeHtml(s.name)}" placeholder="Venue name">
+                            <input type="text" class="site-edit-address px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900" value="${escapeHtml(s.address)}" placeholder="Location details">
+                        </div>
+                        <div class="flex items-center justify-end space-x-2">
+                            <button class="site-edit-cancel px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-200 rounded-lg transition">Cancel</button>
+                            <button class="site-edit-save px-3 py-1.5 text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+
+                const selectBtn = div.querySelector('.site-select-btn');
+                if(selectBtn) selectBtn.addEventListener('click', () => switchActiveSite(s.id));
+
+                const deleteBtn = div.querySelector('.site-delete-btn');
+                if(deleteBtn) deleteBtn.addEventListener('click', () => deleteSite(s.id));
+
+                const editRow = div.querySelector('.site-row-edit');
+                div.querySelector('.site-edit-btn').addEventListener('click', () => editRow.classList.toggle('hidden'));
+                div.querySelector('.site-edit-cancel').addEventListener('click', () => editRow.classList.add('hidden'));
+                div.querySelector('.site-edit-save').addEventListener('click', () => {
+                    const newName = div.querySelector('.site-edit-name').value.trim();
+                    const newAddress = div.querySelector('.site-edit-address').value.trim();
+                    if(!newName || !newAddress) {
+                        showToast("Venue name and location are both required.", "error");
+                        return;
+                    }
+                    s.name = newName;
+                    s.address = newAddress;
+                    saveAppData();
+                    updateSiteBanner();
+                    renderSitesList();
+                    showToast(`Venue updated: ${newName}`);
+                });
+
+                container.appendChild(div);
+            });
+        }
+
+        function switchActiveSite(id) {
+            currentSiteId = id;
+            saveAppData();
+            updateSiteBanner();
+            renderTables();
+            renderSitesList();
+            closeModal('siteManagerModal');
+            showToast(`Switched to ${getCurrentSite().name}`);
+        }
+
+        function handleAddSite(e) {
+            e.preventDefault();
+            const name = document.getElementById('newSiteName').value.trim();
+            const address = document.getElementById('newSiteAddress').value.trim();
+            
+            const newSite = {
+                id: 'site-' + Date.now(),
+                name,
+                address
+            };
+
+            sites.push(newSite);
+            siteRosters[newSite.id] = [];
+            currentSiteId = newSite.id;
+            saveAppData();
+            updateSiteBanner();
+            renderTables();
+            renderSitesList();
+            document.getElementById('addSiteForm').reset();
+            showToast(`Created & switched to venue: ${name}`);
+        }
+
+        function deleteSite(id) {
+            if(sites.length <= 1) {
+                showToast("You must keep at least one venue hub.", "error");
+                return;
+            }
+            const site = sites.find(s => s.id === id);
+            if(!confirm(`Delete venue "${site ? site.name : ''}"? Its crew roster will be removed (sign-in logs are kept).`)) return;
+            sites = sites.filter(s => s.id !== id);
+            delete siteRosters[id];
+            if(currentSiteId === id) {
+                currentSiteId = sites[0].id;
+            }
+            saveAppData();
+            updateSiteBanner();
+            renderTables();
+            renderSitesList();
+            showToast("Venue hub removed.");
+        }
+
+        function getCheckinUrl() {
+            const site = getCurrentSite();
+            const baseUrl = location.href.split('?')[0].split('#')[0];
+            const params = new URLSearchParams({
+                checkin: '1',
+                site: site.id,
+                venue: site.name,
+                loc: site.address
+            });
+            return `${baseUrl}?${params.toString()}`;
+        }
+
+        function renderQRCode() {
+            const container = document.getElementById('qrcodeDisplay');
+            if(!container) return;
+            container.innerHTML = '';
+
+            const checkinUrl = getCheckinUrl();
+
+            if (typeof QRCode !== 'undefined') {
+                new QRCode(container, {
+                    text: checkinUrl,
+                    width: 180,
+                    height: 180,
+                    colorDark: '#0f172a',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                const urlNote = document.createElement('p');
+                urlNote.className = 'text-xs text-slate-400 mt-3 break-all max-w-[200px] mx-auto';
+                urlNote.innerText = checkinUrl;
+                container.appendChild(urlNote);
+            } else {
+                container.innerHTML = '<p class="text-xs text-red-600 p-4 max-w-[200px]">QR library failed to load. Check the internet connection and reopen this window.</p>';
+            }
+        }
+
+        function simulateMobileScan() {
+            closeModal('qrModal');
+            openModal('mobileScanModal');
+        }
+
+        function handleMobileScanSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('scanName').value.trim();
+            const type = document.getElementById('scanType').value;
+            const dept = document.getElementById('scanDept').value.trim();
+            const notes = document.getElementById('scanNotes').value.trim();
+
+            if(isAlreadyOnsite(name)) {
+                showToast(`${name} is already signed in at this venue.`, "error");
+                return;
+            }
+
+            const newEntry = {
+                id: 'log-' + Date.now(),
+                siteId: currentSiteId,
+                name,
+                type,
+                dept,
+                contact: 'Mobile QR Check-In',
+                signInTime: new Date().toISOString(),
+                signOutTime: null,
+                notes: notes ? `QR Scan: ${notes}` : 'Attendee Mobile Check-In',
+                status: 'Active',
+                safe: false
+            };
+
+            logs.unshift(newEntry);
+            saveAppData();
+            closeModal('mobileScanModal');
+            renderTables();
+            showToast(`${name} checked in successfully via ON-site QR!`);
+        }
+
+        function openEvacModal() {
+            requireAdminAction(() => {
+                const site = getCurrentSite();
+                document.getElementById('evacModalSiteName').innerText = site.name;
+                document.getElementById('evacTimestamp').innerText = new Date().toLocaleTimeString();
+                document.getElementById('evacSearchInput').value = '';
+                document.getElementById('evacModal').classList.remove('hidden');
+                renderEvacTable();
+            }, 'Full Admin');
+        }
+
+        function toggleOccupantSafety(id) {
+            const entry = logs.find(l => l.id === id);
+            if(entry) {
+                entry.safe = !entry.safe;
+                saveAppData();
+                renderEvacTable();
+            }
+        }
+
+        function markAllEvacSafe(isSafe) {
+            const activeOccupants = logs.filter(l => l.siteId === currentSiteId && l.status === 'Active');
+            activeOccupants.forEach(l => {
+                l.safe = isSafe;
+            });
+            saveAppData();
+            renderEvacTable();
+        }
+
+        function renderEvacTable() {
+            const searchInput = document.getElementById('evacSearchInput');
+            const query = searchInput ? searchInput.value.toLowerCase() : '';
+            const activeOccupants = logs.filter(l => l.siteId === currentSiteId && l.status === 'Active');
+
+            const total = activeOccupants.length;
+            const safeCount = activeOccupants.filter(l => l.safe).length;
+            const pendingCount = total - safeCount;
+
+            document.getElementById('evacTotalCount').innerText = total;
+            document.getElementById('evacSafeCount').innerText = safeCount;
+            document.getElementById('evacPendingCount').innerText = pendingCount;
+
+            const filtered = activeOccupants.filter(l => l.name.toLowerCase().includes(query) || l.dept.toLowerCase().includes(query) || l.notes.toLowerCase().includes(query));
+
+            const tbody = document.getElementById('evacTableBody');
+            const emptyEl = document.getElementById('emptyEvac');
+            if(!tbody) return;
+
+            tbody.innerHTML = '';
+            if(filtered.length === 0) {
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+            emptyEl.classList.add('hidden');
+
+            filtered.forEach(item => {
+                const isSafe = item.safe;
+                const rowClass = isSafe ? 'bg-emerald-50/60 hover:bg-emerald-50' : 'bg-amber-50/50 hover:bg-amber-50';
+                const badgeColor = item.type === 'VIP Guest' ? 'bg-amber-50 text-amber-700 border-amber-200' : (item.type === 'Staff / Crew' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200');
+
+                const tr = document.createElement('tr');
+                tr.className = `${rowClass} transition cursor-pointer`;
+                tr.onclick = () => toggleOccupantSafety(item.id);
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4">
+                        <button type="button" class="w-8 h-8 rounded-xl flex items-center justify-center font-bold transition shadow-xs ${isSafe ? 'bg-emerald-600 text-white' : 'bg-white border-2 border-amber-400 text-amber-500'}">
+                            <i class="fa-solid ${isSafe ? 'fa-check' : 'fa-triangle-exclamation'}"></i>
+                        </button>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <div class="font-bold text-slate-900">${escapeHtml(item.name)}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(item.contact)}</div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeColor}">${escapeHtml(item.type)}</span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-700">${escapeHtml(item.dept)}</td>
+                    <td class="py-3.5 px-4 text-slate-600 font-medium">${formatTimestamp(item.signInTime)}</td>
+                    <td class="py-3.5 px-4 text-slate-500 max-w-xs truncate">${escapeHtml(item.notes)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportEvacReport() {
+            const activeOccupants = logs.filter(l => l.siteId === currentSiteId && l.status === 'Active');
+            if (activeOccupants.length === 0) {
+                showToast("No active occupants to export for evacuation.", "error");
+                return;
+            }
+
+            let csvContent = "Emergency Evacuation Audit Report\n";
+            csvContent += `Venue,"${getCurrentSite().name}"\n`;
+            csvContent += `Generated,${new Date().toISOString()}\n\n`;
+            csvContent += "Name,Type,Company/Role,Contact,Sign-In Time,Safety Status,Notes\n";
+
+            activeOccupants.forEach(l => {
+                const row = [
+                    l.name,
+                    l.type,
+                    l.dept,
+                    l.contact,
+                    l.signInTime,
+                    l.safe ? "SAFE / ACCOUNTED" : "PENDING",
+                    l.notes
+                ].map(csvField);
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `evac_audit_report_${getCurrentSite().name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Emergency Evacuation Audit CSV generated successfully!");
+        }
+
+        function switchTab(tab) {
+            currentActiveTab = tab;
+            const occBtn = document.getElementById('tabOccupantsBtn');
+            const histBtn = document.getElementById('tabHistoryBtn');
+            const occTab = document.getElementById('occupantsTab');
+            const histTab = document.getElementById('historyTab');
+
+            if (tab === 'occupants') {
+                occBtn.className = "px-4 py-2 text-sm font-semibold rounded-xl bg-slate-900 text-white transition shadow-xs";
+                histBtn.className = "px-4 py-2 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-100 transition";
+                occTab.classList.remove('hidden');
+                histTab.classList.add('hidden');
+            } else {
+                histBtn.className = "px-4 py-2 text-sm font-semibold rounded-xl bg-slate-900 text-white transition shadow-xs";
+                occBtn.className = "px-4 py-2 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-100 transition";
+                histTab.classList.remove('hidden');
+                occTab.classList.add('hidden');
+            }
+            renderTables();
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-600 text-white';
+            const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-white';
+            
+            toast.className = `${bgClass} px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center space-x-3 pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function signOutUser(id) {
+            requireAdminAction(() => {
+                const entry = logs.find(l => l.id === id);
+                if (entry && entry.status === 'Active') {
+                    entry.signOutTime = new Date().toISOString();
+                    entry.status = 'Completed';
+                    saveAppData();
+                    renderTables();
+                    showToast(`${entry.name} signed out successfully.`);
+                }
+            }, 'Crew Admin');
+        }
+
+        function formatTimestamp(isoString) {
+            if (!isoString) return '---';
+            const date = new Date(isoString);
+            return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function calculateDuration(startIso, endIso) {
+            if (!endIso) return 'Still ON-site';
+            const diff = new Date(endIso) - new Date(startIso);
+            const mins = Math.floor(diff / 60000);
+            const hours = Math.floor(mins / 60);
+            const remainingMins = mins % 60;
+            if (hours === 0) return `${remainingMins} mins`;
+            return `${hours}h ${remainingMins}m`;
+        }
+
+        function renderTables() {
+            const searchInput = document.getElementById('searchInput');
+            const filterSelect = document.getElementById('filterType');
+            const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
+            const filterType = filterSelect ? filterSelect.value : 'all';
+
+            const siteLogs = logs.filter(l => l.siteId === currentSiteId);
+            const activeOccupants = siteLogs.filter(l => l.status === 'Active');
+            
+            const statCurrent = document.getElementById('statCurrent');
+            const occupantBadge = document.getElementById('occupantCountBadge');
+            if(statCurrent) statCurrent.innerText = activeOccupants.length;
+            if(occupantBadge) occupantBadge.innerText = activeOccupants.length;
+
+            const todayStr = new Date().toDateString();
+            const todayTotal = siteLogs.filter(l => new Date(l.signInTime).toDateString() === todayStr).length;
+            const statToday = document.getElementById('statToday');
+            const statTotal = document.getElementById('statTotalLogs');
+            if(statToday) statToday.innerText = todayTotal;
+            if(statTotal) statTotal.innerText = siteLogs.length;
+
+            const filteredActive = activeOccupants.filter(l => {
+                const matchesSearch = l.name.toLowerCase().includes(searchQuery) || l.dept.toLowerCase().includes(searchQuery) || l.notes.toLowerCase().includes(searchQuery);
+                const matchesType = filterType === 'all' || l.type === filterType;
+                return matchesSearch && matchesType;
+            });
+
+            const filteredHistory = siteLogs.filter(l => {
+                const matchesSearch = l.name.toLowerCase().includes(searchQuery) || l.dept.toLowerCase().includes(searchQuery) || l.notes.toLowerCase().includes(searchQuery);
+                const matchesType = filterType === 'all' || l.type === filterType;
+                return matchesSearch && matchesType;
+            });
+
+            const isAdmin = currentAuthRole === 'Crew Admin' || currentAuthRole === 'Full Admin';
+
+            // Render Occupants Table
+            const occBody = document.getElementById('occupantsTableBody');
+            const emptyOccupants = document.getElementById('emptyOccupants');
+            if(occBody) {
+                occBody.innerHTML = '';
+
+                if (filteredActive.length === 0) {
+                    if(emptyOccupants) emptyOccupants.classList.remove('hidden');
+                } else {
+                    if(emptyOccupants) emptyOccupants.classList.add('hidden');
+                    filteredActive.forEach(item => {
+                        const badgeColor = item.type === 'VIP Guest' ? 'bg-amber-50 text-amber-700 border-amber-200' : (item.type === 'Staff / Crew' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200');
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-slate-50/80 transition";
+                        row.innerHTML = `
+                            <td class="py-3.5 px-4">
+                                <div class="font-semibold text-slate-800">${escapeHtml(item.name)}</div>
+                                <div class="text-xs text-slate-400">${escapeHtml(item.contact)}</div>
+                            </td>
+                            <td class="py-3.5 px-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeColor}">${escapeHtml(item.type)}</span>
+                            </td>
+                            <td class="py-3.5 px-4 text-slate-600">${escapeHtml(item.dept)}</td>
+                            <td class="py-3.5 px-4 text-slate-600 font-medium">${formatTimestamp(item.signInTime)}</td>
+                            <td class="py-3.5 px-4 text-slate-500 max-w-xs truncate">${escapeHtml(item.notes)}</td>
+                            <td class="py-3.5 px-4 text-right">
+                                ${isAdmin ? `<button class="row-signout-btn bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs px-3 py-1.5 rounded-lg border border-slate-200 transition"><i class="fa-solid fa-right-from-bracket mr-1"></i> Sign Out</button>` : '<span class="text-xs text-slate-400 italic">Admin only</span>'}
+                            </td>
+                        `;
+                        const signOutBtn = row.querySelector('.row-signout-btn');
+                        if(signOutBtn) signOutBtn.addEventListener('click', () => signOutUser(item.id));
+                        occBody.appendChild(row);
+                    });
+                }
+            }
+
+            // Render History Table
+            const histBody = document.getElementById('historyTableBody');
+            const emptyHistory = document.getElementById('emptyHistory');
+            if(histBody) {
+                histBody.innerHTML = '';
+
+                if (filteredHistory.length === 0) {
+                    if(emptyHistory) emptyHistory.classList.remove('hidden');
+                } else {
+                    if(emptyHistory) emptyHistory.classList.add('hidden');
+                    filteredHistory.forEach(item => {
+                        const badgeColor = item.type === 'VIP Guest' ? 'bg-amber-50 text-amber-700 border-amber-200' : (item.type === 'Staff / Crew' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200');
+                        const statusBadge = item.status === 'Active' ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">ON-site Now</span>' : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">Departed</span>';
+                        
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-slate-50/80 transition";
+                        row.innerHTML = `
+                            <td class="py-3.5 px-4">
+                                <div class="font-semibold text-slate-800">${escapeHtml(item.name)}</div>
+                                <div class="text-xs text-slate-400">${escapeHtml(item.dept)}</div>
+                            </td>
+                            <td class="py-3.5 px-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeColor}">${escapeHtml(item.type)}</span>
+                            </td>
+                            <td class="py-3.5 px-4 text-slate-600">${formatTimestamp(item.signInTime)}</td>
+                            <td class="py-3.5 px-4 text-slate-600">${formatTimestamp(item.signOutTime)}</td>
+                            <td class="py-3.5 px-4 text-slate-600 font-medium">${calculateDuration(item.signInTime, item.signOutTime)}</td>
+                            <td class="py-3.5 px-4">${statusBadge}</td>
+                            <td class="py-3.5 px-4 text-right text-slate-500 max-w-xs truncate">${escapeHtml(item.notes)}</td>
+                        `;
+                        histBody.appendChild(row);
+                    });
+                }
+            }
+        }
+
+        function handleSearch() {
+            renderTables();
+        }
+
+        function handleFilter() {
+            renderTables();
+        }
+
+        function exportCSV() {
+            const siteLogs = logs.filter(l => l.siteId === currentSiteId);
+            if (siteLogs.length === 0) {
+                showToast("No data available for this venue to export.", "error");
+                return;
+            }
+
+            let csvContent = "ID,Venue,Name,RegistrationType,Company/Role,Contact,Sign-In Time,Sign-Out Time,Status,Notes\n";
+            siteLogs.forEach(l => {
+                const row = [
+                    l.id,
+                    getCurrentSite().name,
+                    l.name,
+                    l.type,
+                    l.dept,
+                    l.contact,
+                    l.signInTime,
+                    l.signOutTime || '',
+                    l.status,
+                    l.notes
+                ].map(csvField);
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `sterling_onsite_log_${getCurrentSite().name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Sterling Event CSV export generated successfully!");
+        }
+
+        // Full app data backup / restore (venues, rosters, logs)
+        function exportAppBackup() {
+            const backup = {
+                app: 'sterling-onsite',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                sites,
+                siteRosters,
+                logs,
+                currentSiteId
+            };
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `sterling_onsite_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Full data backup exported.");
+        }
+
+        function importAppBackup(event) {
+            const file = event.target.files && event.target.files[0];
+            if(!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if(data.app !== 'sterling-onsite' || !Array.isArray(data.sites) || !Array.isArray(data.logs)) {
+                        showToast("Not a valid Sterling ON-site backup file.", "error");
+                        return;
+                    }
+                    const exportDate = data.exportedAt ? data.exportedAt.slice(0, 10) : 'unknown date';
+                    if(!confirm(`Import backup from ${exportDate}? This replaces all venues, rosters and logs currently on this device.`)) return;
+
+                    sites = data.sites;
+                    siteRosters = data.siteRosters || {};
+                    logs = data.logs;
+                    currentSiteId = sites.some(s => s.id === data.currentSiteId) ? data.currentSiteId : sites[0].id;
+                    saveAppData();
+                    updateSiteBanner();
+                    renderTables();
+                    renderSitesList();
+                    showToast("Backup imported successfully!");
+                } catch (err) {
+                    showToast("Could not read backup file: " + err.message, "error");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // Quote a value for CSV output only when needed, doubling embedded quotes
+        function csvField(v) {
+            const s = (v === null || v === undefined) ? '' : String(v);
+            return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Modal UX: Escape closes any open modal, clicking the backdrop closes it too
+        function setupModalUX() {
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('div[id$="Modal"]:not(.hidden)').forEach(m => closeModal(m.id));
+                }
+            });
+            document.querySelectorAll('div[id$="Modal"]').forEach(m => {
+                m.addEventListener('mousedown', (e) => {
+                    if (e.target === m) closeModal(m.id);
+                });
+            });
+        }
+
+        // If opened from a scanned kiosk QR code, resolve the venue before showing self check-in.
+        // The scanning device won't know locally-created venue IDs, so the QR also carries the
+        // venue name and location: match on ID, then name, and failing both, create it here.
+        function handleCheckinUrlParams() {
+            const params = new URLSearchParams(location.search);
+            if (params.get('checkin') !== '1') return;
+
+            const siteParam = params.get('site');
+            const venueName = (params.get('venue') || '').trim();
+            const venueLoc = (params.get('loc') || '').trim();
+
+            let target = sites.find(s => s.id === siteParam);
+
+            if (!target && venueName) {
+                target = sites.find(s => s.name.toLowerCase() === venueName.toLowerCase());
+            }
+
+            if (!target && venueName) {
+                target = { id: siteParam || 'site-' + Date.now(), name: venueName, address: venueLoc || 'Scanned kiosk venue' };
+                sites.push(target);
+                siteRosters[target.id] = siteRosters[target.id] || [];
+            }
+
+            if (target) {
+                currentSiteId = target.id;
+                saveAppData();
+                updateSiteBanner();
+                renderTables();
+                openModal('mobileScanModal');
+                return;
+            }
+
+            // No venue information in the code at all — don't guess a venue for them
+            showToast("This check-in code is missing venue details. Ask a supervisor to reprint it.", "error");
+        }
+
+        window.onload = function() {
+            updateSiteBanner();
+            updateAuthUI();
+            renderTables();
+            setupModalUX();
+            handleCheckinUrlParams();
+        };
+    </script>
+</body>
+</html>
