@@ -287,8 +287,8 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Admin Security Passcode</label>
-                        <input type="password" id="adminPasscodeInput" placeholder="Enter PIN (default: seg2026)" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
-                        <p class="text-xs text-slate-400 mt-1">Default PIN: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-mono">seg2026</code></p>
+                        <input type="password" id="adminPasscodeInput" placeholder="Enter PIN" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+                        <p class="text-xs text-slate-400 mt-1">Default PIN: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-mono">xxxx</code></p>
                     </div>
                     <div class="pt-2 flex items-center justify-end space-x-2">
                         <button type="button" onclick="closeModal('authModal')" class="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
@@ -868,8 +868,8 @@
             const roleSelect = document.getElementById('adminRoleSelect').value;
             const passcode = document.getElementById('adminPasscodeInput').value.trim();
 
-            // Default simple passcode for demo: seg2026
-            if(passcode === 'seg2026') {
+            // Default simple passcode for demo: Pioneer
+            if(passcode === 'Pioneer') {
                 currentAuthRole = roleSelect;
                 saveAppData();
                 closeModal('authModal');
@@ -877,7 +877,7 @@
                 updateAuthUI();
                 showToast(`Successfully authenticated as ${currentAuthRole}!`);
             } else {
-                showToast("Invalid security passcode. Try 'seg2026'.", "error");
+                showToast("Invalid security passcode. Try 'Pioneer'.", "error");
             }
         }
 
